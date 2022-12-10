@@ -1,0 +1,162 @@
+import numpy as np
+from collections import defaultdict
+from environment import *
+import itertools
+import sys
+
+
+def create_Q_double():
+    return np.zeros(3)
+
+
+def create_q_default():
+    return np.zeros(2)
+
+
+def monte_carlo(env, num_episodes, discount_factor=1.0):
+    meanReturn = 0
+    wins = 0
+    if env.name == "default":
+        Q = defaultdict(create_q_default)
+    else:
+        Q = defaultdict(create_Q_double)
+    N0 = 100
+    NSA = defaultdict(lambda: np.zeros(env.action_space_n))
+    NS = defaultdict(lambda: np.zeros(1))
+    alpha = lambda state, action: 1 / NSA[state][action]
+    epsilon = lambda state: N0 / (N0 + NS[state])
+    actions = env.get_actions()
+
+    def epsilonGreedy(state):
+        eps = max(0.01, epsilon(state))
+        if np.random.random() < eps:
+            action = np.random.choice(actions)
+        else:
+            # exploitation
+            action = np.argmax(Q[state])
+        return action
+
+    for episode in range(num_episodes):
+
+        terminated = False
+        SAR = list()
+        state = env.reset()
+        # run an episode
+        while not terminated:
+            NS[state] += 1
+            action = epsilonGreedy(state)
+            NSA[state] += 1
+            state_new, terminated, r = env.step(action)
+            SAR.append([state, action, r])
+            state = state_new
+        # Update Q
+        Returns = sum([sar[2] for sar in SAR])  # sum all rewards
+        for sar in SAR:
+            Q[sar[0]][sar[1]] += alpha(sar[0], sar[1]) * (Returns - Q[sar[0]][sar[1]])  # Weighted mean
+
+        meanReturn = meanReturn + 1 / (episode + 1) * (Returns - meanReturn)  # for printing only
+        if r == 1:
+            wins += 1
+
+        if episode % 10000 == 0:
+            print("Episode %i, Mean-Return %.3f, Wins %.2f" % (episode, meanReturn, wins / (episode + 1)))
+
+
+def q_learning(env, num_episodes, discount_factor=1.0):
+    meanReturn = 0
+    wins = 0
+    if env.name == "default":
+        Q = defaultdict(create_q_default)
+    else:
+        Q = defaultdict(create_Q_double)
+    N0 = 100
+    NSA = defaultdict(lambda: np.zeros(env.action_space_n))
+    NS = defaultdict(lambda: np.zeros(1))
+    alpha = lambda state, action: 1 / NSA[state][action]
+    epsilon = lambda state: N0 / (N0 + NS[state])
+    actions = env.get_actions()
+
+    def epsilonGreedy(state):
+        eps = max(0.01, epsilon(state))
+        if np.random.random() < eps:
+            action = np.random.choice(actions)
+        else:
+            # exploitation
+            action = np.argmax(Q[state])
+        return action
+
+    for i_episode in range(num_episodes):
+        # Print out which episode we're on, useful for debugging.
+        if (i_episode + 1) % 100 == 0:
+            print("\rEpisode {}/{}.".format(i_episode + 1, num_episodes), end="")
+            sys.stdout.flush()
+        state = env.reset()
+        # One step in the environment
+        # total_reward = 0.0
+        for t in itertools.count():
+
+            action = epsilonGreedy(state)
+            NS[state] += 1
+            NSA[state][action] += 1
+            next_state, reward, done = env.step(action)
+            # TD Update
+            best_next_action = np.argmax(Q[next_state])
+            td_target = reward + discount_factor * Q[next_state][best_next_action]
+            td_delta = td_target - Q[state][action]
+            Q[state][action] += alpha(state, action) * td_delta
+
+            if done:
+                break
+            state = next_state
+
+    return Q
+
+
+def sarsa(env, num_episodes, discount_factor=1.0):
+    meanReturn = 0
+    wins = 0
+    if env.name == "default":
+        Q = defaultdict(create_q_default)
+    else:
+        Q = defaultdict(create_Q_double)
+    N0 = 100
+    NSA = defaultdict(lambda: np.zeros(env.action_space_n))
+    NS = defaultdict(lambda: np.zeros(1))
+    alpha = lambda state, action: 1 / NSA[state][action]
+    epsilon = lambda state: N0 / (N0 + NS[state])
+    actions = env.get_actions()
+
+    def epsilonGreedy(state):
+        eps = max(0.01, epsilon(state))
+        if np.random.random() < eps:
+            action = np.random.choice(actions)
+        else:
+            # exploitation
+            action = np.argmax(Q[state])
+        return action
+
+    for i_episode in range(num_episodes):
+        # Print out which episode we're on, useful for debugging.
+        if (i_episode + 1) % 100 == 0:
+            print("\rEpisode {}/{}.".format(i_episode + 1, num_episodes), end="")
+            sys.stdout.flush()
+        state = env.reset()
+        # One step in the environment
+        # total_reward = 0.0
+        for t in itertools.count():
+
+            action = epsilonGreedy(state)
+            NS[state] += 1
+            NSA[state][action] += 1
+            next_state, reward, done = env.step(action)
+            # TD Update
+            next_action = epsilonGreedy(state)
+            td_target = reward + discount_factor * Q[next_state][next_action]
+            td_error = td_target - Q[state][action]
+            Q[state][action] += alpha(state, action) * td_error
+
+            if done:
+                break
+            state = next_state
+
+    return Q
