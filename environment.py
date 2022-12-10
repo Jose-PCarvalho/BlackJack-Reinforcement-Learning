@@ -36,7 +36,7 @@ class BlackJack:
                 self.player_ace = True
             else:
                 self.dealer_ace = True
-        return random.choice(self.cards)
+        return value
 
     def is_bust(self, participant="p"):
         if participant == "p":
@@ -116,7 +116,7 @@ class BlackJackDouble:
                 self.player_ace = True
             else:
                 self.dealer_ace = True
-        return random.choice(self.cards)
+        return value
 
     def is_bust(self, participant="p"):
         if participant == "p":
