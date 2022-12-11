@@ -141,11 +141,9 @@ def sarsa(env, num_episodes, discount_factor=1.0):
             print("\rEpisode {}/{}.".format(i_episode + 1, num_episodes), end="")
             sys.stdout.flush()
         state = env.reset()
-        # One step in the environment
-        # total_reward = 0.0
+        action = epsilonGreedy(state)
         for t in itertools.count():
 
-            action = epsilonGreedy(state)
             NS[state] += 1
             NSA[state][action] += 1
             next_state, reward, done = env.step(action)
@@ -158,6 +156,7 @@ def sarsa(env, num_episodes, discount_factor=1.0):
             if done:
                 break
             state = next_state
+            action = next_action
 
     return Q
 
@@ -194,9 +193,9 @@ def sarsa_lambda(env, num_episodes, ld=1, discount_factor=1.0):  # ld=lambda
             e_traces = defaultdict(create_q_default)
         else:
             e_traces = defaultdict(create_Q_double())
+        action = epsilonGreedy(state)
         for t in itertools.count():
 
-            action = epsilonGreedy(state)
             NS[state] += 1
             NSA[state][action] += 1
             next_state, reward, done = env.step(action)
@@ -212,6 +211,7 @@ def sarsa_lambda(env, num_episodes, ld=1, discount_factor=1.0):  # ld=lambda
             if done:
                 break
             state = next_state
+            action = next_action
 
     return Q
 
