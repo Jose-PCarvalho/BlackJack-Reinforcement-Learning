@@ -16,7 +16,7 @@ def create_q_default():
 def monte_carlo(env, num_episodes, discount_factor=1.0):
     meanReturn = 0
     wins = 0
-    if env.name == "default":
+    if env.mode == "normal":
         Q = defaultdict(create_q_default)
     else:
         Q = defaultdict(create_Q_double)
@@ -65,7 +65,7 @@ def monte_carlo(env, num_episodes, discount_factor=1.0):
 def q_learning(env, num_episodes, discount_factor=1.0):
     meanReturn = 0
     wins = 0
-    if env.name == "default":
+    if env.mode == "normal":
         Q = defaultdict(create_q_default)
     else:
         Q = defaultdict(create_Q_double)
@@ -115,7 +115,7 @@ def q_learning(env, num_episodes, discount_factor=1.0):
 def sarsa(env, num_episodes, discount_factor=1.0):
     meanReturn = 0
     wins = 0
-    if env.name == "default":
+    if env.mode == "normal":
         Q = defaultdict(create_q_default)
     else:
         Q = defaultdict(create_Q_double)
@@ -159,4 +159,121 @@ def sarsa(env, num_episodes, discount_factor=1.0):
                 break
             state = next_state
 
+    return Q
+
+
+def sarsa_lambda(env, num_episodes, ld=1, discount_factor=1.0):  # ld=lambda
+    meanReturn = 0
+    wins = 0
+    if env.mode == "normal":
+        Q = defaultdict(create_q_default)
+    else:
+        Q = defaultdict(create_Q_double)
+    N0 = 100
+    NSA = defaultdict(lambda: np.zeros(env.action_space_n))
+    NS = defaultdict(lambda: np.zeros(1))
+    alpha = lambda state, action: 1 / NSA[state][action]
+    epsilon = lambda state: N0 / (N0 + NS[state])
+    actions = env.get_actions()
+
+    def epsilonGreedy(state):
+        eps = max(0.01, epsilon(state))
+        if np.random.random() < eps:
+            action = np.random.choice(actions)
+        else:
+            # exploitation
+            action = np.argmax(Q[state])
+        return action
+
+    for i_episode in range(num_episodes):
+        if (i_episode + 1) % 100 == 0:
+            print("\rEpisode {}/{}.".format(i_episode + 1, num_episodes), end="")
+            sys.stdout.flush()
+        state = env.reset()
+        if env.mode == "normal":
+            e_traces = defaultdict(create_q_default)
+        else:
+            e_traces = defaultdict(create_Q_double())
+        for t in itertools.count():
+
+            action = epsilonGreedy(state)
+            NS[state] += 1
+            NSA[state][action] += 1
+            next_state, reward, done = env.step(action)
+            # TD Update
+            next_action = epsilonGreedy(state)
+            td_target = reward + discount_factor * Q[next_state][next_action]
+            td_error = td_target - Q[state][action]
+            e_traces[state][action] += 1
+            for s in Q.keys():
+                for a in actions:
+                    Q[s][a] += Q[s][a] + alpha(s, a) * td_error * e_traces[s][a]
+                    e_traces[s][a] = ld * discount_factor * e_traces[s][a]
+            if done:
+                break
+            state = next_state
+
+    return Q
+
+
+def watkins_q(env, num_episodes, ld=1.0, discount_factor=1.0):
+    meanReturn = 0
+    wins = 0
+    if env.mode == "normal":
+        Q = defaultdict(create_q_default)
+    else:
+        Q = defaultdict(create_Q_double)
+    N0 = 100
+    NSA = defaultdict(lambda: np.zeros(env.action_space_n))
+    NS = defaultdict(lambda: np.zeros(1))
+    alpha = lambda state, action: 1 / NSA[state][action]
+    epsilon = lambda state: N0 / (N0 + NS[state])
+    actions = env.get_actions()
+
+    def epsilonGreedy(state):
+        eps = max(0.01, epsilon(state))
+        if np.random.random() < eps:
+            action = np.random.choice(actions)
+        else:
+            # exploitation
+            action = np.argmax(Q[state])
+        return action
+
+    for i_episode in range(num_episodes):
+        # Print out which episode we're on, useful for debugging.
+        if (i_episode + 1) % 100 == 0:
+            print("\rEpisode {}/{}.".format(i_episode + 1, num_episodes), end="")
+            sys.stdout.flush()
+        state = env.reset()
+        if env.mode == "normal":
+            e_traces = defaultdict(create_q_default)
+        else:
+            e_traces = defaultdict(create_Q_double())
+
+        action = epsilonGreedy(state)
+        for t in itertools.count():
+            best_flag = False
+            NS[state] += 1
+            NSA[state][action] += 1
+            next_state, reward, done = env.step(action)
+            # TD Update
+            next_action = epsilonGreedy(next_state)
+            best_next_action = np.argmax(Q[next_state])
+            if Q[next_state][next_action] == Q[next_state][best_next_action]:
+                best_next_action = next_action
+                best_flag = True
+            td_target = reward + discount_factor * Q[next_state][best_next_action]
+            td_error = td_target - Q[state][action]
+            for s in Q.keys():
+                for a in actions:
+                    Q[s][a] += Q[s][a] + alpha(s, a) * td_error * e_traces[s][a]
+                    if best_flag:
+                        e_traces[s][a] = ld * discount_factor * e_traces[s][a]
+                    else:
+                        e_traces[s][a] = 0
+
+            if done:
+                break
+            state = next_state
+            action = next_action
     return Q

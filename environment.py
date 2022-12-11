@@ -3,25 +3,25 @@ import random
 
 
 class BlackJack:
-    def __init__(self,type="normal"):
+    def __init__(self, mode="normal"):
         self.p = 0
         self.d = 0
         self.cards = [11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]
         self.player_ace = False
         self.dealer_ace = False
         self.terminated = False
+        self.mode = mode
         self.action_space_n = len(self.get_actions())
-        self.type=type
-        self.base_reward=1
+        self.base_reward = 1
 
     def get_state(self):
         return (self.p, self.d, self.player_ace)
 
     def get_actions(self):
-        if self.type=="normal":
+        if self.mode == "normal":
             return [0, 1]
         else:
-            return[0,1,2]
+            return [0, 1, 2]
 
     def reset(self):
         self.p = self.draw("p")
@@ -30,7 +30,7 @@ class BlackJack:
         self.player_ace = False
         self.dealer_ace = False
         self.terminated = False
-        self.base_reward=1
+        self.base_reward = 1
         return self.get_state()
 
     def draw(self, participant="p"):
@@ -85,4 +85,3 @@ class BlackJack:
             if self.p < self.d <= 21:
                 reward = -self.base_reward
         return self.get_state(), self.terminated, reward
-
