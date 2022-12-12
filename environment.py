@@ -76,7 +76,7 @@ class BlackJack:
 
         elif action == 0:
             self.terminated = True
-            while self.d < 17:
+            while self.d < 17 and self.d < self.p:
                 self.d += self.draw("d")
             if self.p == self.d:
                 reward = 0

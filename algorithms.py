@@ -203,7 +203,7 @@ def sarsa_lambda(env, num_episodes, ld=1, discount_factor=1.0):  # ld=lambda
             next_action = epsilonGreedy(state)
             td_target = reward + discount_factor * Q[next_state][next_action]
             td_error = td_target - Q[state][action]
-            e_traces[state][action] += 1
+            e_traces[state][action] = (1 - alpha(state, action)) * e_traces[state][action] + 1
             for s in Q.keys():
                 for a in actions:
                     Q[s][a] += Q[s][a] + alpha(s, a) * td_error * e_traces[s][a]
@@ -264,6 +264,7 @@ def watkins_q(env, num_episodes, ld=1.0, discount_factor=1.0):
                 best_flag = True
             td_target = reward + discount_factor * Q[next_state][best_next_action]
             td_error = td_target - Q[state][action]
+            e_traces[state][action] = (1 - alpha(state, action)) * e_traces[state][action] + 1
             for s in Q.keys():
                 for a in actions:
                     Q[s][a] += Q[s][a] + alpha(s, a) * td_error * e_traces[s][a]
