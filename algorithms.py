@@ -21,6 +21,8 @@ def monte_carlo(env, num_episodes, discount_factor=1.0):
     else:
         Q = defaultdict(create_Q_double)
     N0 = 100
+    # AQUI
+    # Preciso entender melhor como funciona esse lambda
     NSA = defaultdict(lambda: np.zeros(env.action_space_n))
     NS = defaultdict(lambda: np.zeros(1))
     alpha = lambda state, action: 1 / NSA[state][action]
@@ -45,7 +47,9 @@ def monte_carlo(env, num_episodes, discount_factor=1.0):
         while not terminated:
             NS[state] += 1
             action = epsilonGreedy(state)
-            NSA[state] += 1
+            # AQUI
+            # Não seria [state][action]?
+            NSA[state][action] += 1
             state_new, terminated, r = env.step(action)
             SAR.append([state, action, r])
             state = state_new
@@ -98,7 +102,9 @@ def q_learning(env, num_episodes, discount_factor=1.0):
             action = epsilonGreedy(state)
             NS[state] += 1
             NSA[state][action] += 1
-            next_state, reward, done = env.step(action)
+            # AQUI
+            # Não seria done, reward?
+            next_state, done, reward = env.step(action)
             # TD Update
             best_next_action = np.argmax(Q[next_state])
             td_target = reward + discount_factor * Q[next_state][best_next_action]
@@ -137,8 +143,10 @@ def sarsa(env, num_episodes, discount_factor=1.0):
 
     for i_episode in range(num_episodes):
         # Print out which episode we're on, useful for debugging.
-        if (i_episode + 1) % 100 == 0:
+        if (i_episode + 1) % 10000 == 0:
             print("\rEpisode {}/{}.".format(i_episode + 1, num_episodes), end="")
+            print("\n Wins %.2f" % (wins / 10000))
+            wins = 0
             sys.stdout.flush()
         state = env.reset()
         action = epsilonGreedy(state)
@@ -146,14 +154,20 @@ def sarsa(env, num_episodes, discount_factor=1.0):
 
             NS[state] += 1
             NSA[state][action] += 1
-            next_state, reward, done = env.step(action)
+            # AQUI
+            # Não seria: done, reward?
+            next_state, done, reward = env.step(action)
             # TD Update
-            next_action = epsilonGreedy(state)
+            # AQUI
+            # Não seria epsilongreedy(nex_state)?
+            next_action = epsilonGreedy(next_state)
             td_target = reward + discount_factor * Q[next_state][next_action]
             td_error = td_target - Q[state][action]
             Q[state][action] += alpha(state, action) * td_error
 
             if done:
+                if reward == 1:
+                    wins += 1
                 break
             state = next_state
             action = next_action
@@ -187,6 +201,7 @@ def sarsa_lambda(env, num_episodes, ld=1, discount_factor=1.0):  # ld=lambda
     for i_episode in range(num_episodes):
         if (i_episode + 1) % 100 == 0:
             print("\rEpisode {}/{}.".format(i_episode + 1, num_episodes), end="")
+            print("\n Wins %.2f" %( wins/(i_episode+1)))
             sys.stdout.flush()
         state = env.reset()
         if env.mode == "normal":
@@ -198,17 +213,25 @@ def sarsa_lambda(env, num_episodes, ld=1, discount_factor=1.0):  # ld=lambda
 
             NS[state] += 1
             NSA[state][action] += 1
-            next_state, reward, done = env.step(action)
+            # AQUI
+            # Mesma coisa
+            next_state, done, reward = env.step(action)
             # TD Update
-            next_action = epsilonGreedy(state)
+            # AQUI
+            # Mesma coisa
+            next_action = epsilonGreedy(next_state)
             td_target = reward + discount_factor * Q[next_state][next_action]
             td_error = td_target - Q[state][action]
             e_traces[state][action] = (1 - alpha(state, action)) * e_traces[state][action] + 1
             for s in Q.keys():
                 for a in actions:
-                    Q[s][a] += Q[s][a] + alpha(s, a) * td_error * e_traces[s][a]
-                    e_traces[s][a] = ld * discount_factor * e_traces[s][a]
+                    # AQUI
+                    if e_traces[s][a] != 0:
+                        Q[s][a] += Q[s][a] + alpha(s, a) * td_error * e_traces[s][a]
+                        e_traces[s][a] = ld * discount_factor * e_traces[s][a]
             if done:
+                if reward == 1:
+                    wins += 1
                 break
             state = next_state
             action = next_action
