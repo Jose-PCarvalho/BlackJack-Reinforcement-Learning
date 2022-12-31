@@ -23,6 +23,7 @@ def monte_carlo(env, num_episodes, discount_factor=1.0):
     N0 = 100
     # AQUI
     # Preciso entender melhor como funciona esse lambda
+    # Procura por lambda function, é só uma função não declarada, não é muito relevante.
     NSA = defaultdict(lambda: np.zeros(env.action_space_n))
     NS = defaultdict(lambda: np.zeros(1))
     alpha = lambda state, action: 1 / NSA[state][action]
@@ -48,7 +49,7 @@ def monte_carlo(env, num_episodes, discount_factor=1.0):
             NS[state] += 1
             action = epsilonGreedy(state)
             # AQUI
-            # Não seria [state][action]?
+            # Não seria [state][action]? Sim, Obrigado.
             NSA[state][action] += 1
             state_new, terminated, r = env.step(action)
             SAR.append([state, action, r])
@@ -98,12 +99,11 @@ def q_learning(env, num_episodes, discount_factor=1.0):
         # One step in the environment
         # total_reward = 0.0
         for t in itertools.count():
-
             action = epsilonGreedy(state)
             NS[state] += 1
             NSA[state][action] += 1
             # AQUI
-            # Não seria done, reward?
+            # Não seria done, reward? Não, precisas de saber qual é o próximo estado
             next_state, done, reward = env.step(action)
             # TD Update
             best_next_action = np.argmax(Q[next_state])
@@ -154,12 +154,10 @@ def sarsa(env, num_episodes, discount_factor=1.0):
 
             NS[state] += 1
             NSA[state][action] += 1
-            # AQUI
-            # Não seria: done, reward?
+            # Mesma coisa
             next_state, done, reward = env.step(action)
             # TD Update
-            # AQUI
-            # Não seria epsilongreedy(nex_state)?
+            # Não seria epsilongreedy(nex_state)? Sim, foi falha.
             next_action = epsilonGreedy(next_state)
             td_target = reward + discount_factor * Q[next_state][next_action]
             td_error = td_target - Q[state][action]
@@ -207,28 +205,23 @@ def sarsa_lambda(env, num_episodes, ld=1, discount_factor=1.0):  # ld=lambda
         if env.mode == "normal":
             e_traces = defaultdict(create_q_default)
         else:
-            e_traces = defaultdict(create_Q_double())
+            e_traces = defaultdict(create_Q_double)
         action = epsilonGreedy(state)
         for t in itertools.count():
-
             NS[state] += 1
             NSA[state][action] += 1
-            # AQUI
-            # Mesma coisa
             next_state, done, reward = env.step(action)
             # TD Update
-            # AQUI
-            # Mesma coisa
             next_action = epsilonGreedy(next_state)
             td_target = reward + discount_factor * Q[next_state][next_action]
             td_error = td_target - Q[state][action]
             e_traces[state][action] = (1 - alpha(state, action)) * e_traces[state][action] + 1
             for s in Q.keys():
                 for a in actions:
-                    # AQUI
-                    if e_traces[s][a] != 0:
-                        Q[s][a] += Q[s][a] + alpha(s, a) * td_error * e_traces[s][a]
-                        e_traces[s][a] = ld * discount_factor * e_traces[s][a]
+                    # AQUI, não é preciso o if porque se o e_trace=0 o Q continua igual
+                    # Mas havia um bug na formula, obrigado.
+                    Q[s][a] += alpha(s, a) * td_error * e_traces[s][a]
+                    e_traces[s][a] = ld * discount_factor * e_traces[s][a]
             if done:
                 if reward == 1:
                     wins += 1
@@ -290,7 +283,7 @@ def watkins_q(env, num_episodes, ld=1.0, discount_factor=1.0):
             e_traces[state][action] = (1 - alpha(state, action)) * e_traces[state][action] + 1
             for s in Q.keys():
                 for a in actions:
-                    Q[s][a] += Q[s][a] + alpha(s, a) * td_error * e_traces[s][a]
+                    Q[s][a] += alpha(s, a) * td_error * e_traces[s][a]
                     if best_flag:
                         e_traces[s][a] = ld * discount_factor * e_traces[s][a]
                     else:
